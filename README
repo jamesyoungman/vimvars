@@ -1,0 +1,5 @@
+The accompanying code is intended to provide support for VI-style
+modelines in Emacs.  The idea is that using this code, you can make
+your Emacs editor obey the vi-oriented settings your collaborators put
+in the file, so that when you start working on their project, your
+code is correctly laid out from the start.
