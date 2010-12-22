@@ -151,3 +151,5 @@ for utf-16 since we don't know what to do."
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
+
+(provide 'vimvars)
