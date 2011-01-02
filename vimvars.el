@@ -24,12 +24,30 @@
 ;; a hook which checks for a VI-style in the current buffer and sets
 ;; various Emacs buffer-local variables accordingly.
 
+(defgroup vimvars nil
+  "Support for VIM mode lines."
+  :group 'find-file)
 
-;; FIXME: update this to be more consistent with VIM, which by checks 
-;; default checks the first 5 lines.
-(defvar vimvars-chars-in-file-head 512
-  "The number of characters of the head of a file that we will search
-for VIM settings.")
+
+(defcustom vimvars-enabled t
+  "If nil, VIM mode lines will be ignored."
+  :type 'boolean
+  :group 'vimvars)
+(make-variable-buffer-local 'vimvars-enabled)
+
+
+(defcustom vimvars-check-lines 5
+  "The number of lines in the head of a file that we will search
+for VIM settings (VIM itself checks 5)."
+  :type 'integer
+  :group 'vimvars)
+
+
+(defcustom vimvars-ignore-mode-line-if-local-variables-exist t
+  "If non-nil, VIM mode lines are ignored in files that have Emacs 
+local variables."
+  :type 'boolean
+  :group 'vimvars)
 
 
 ;; It appears that real VIM accepts backslash-escaped characters (for
@@ -39,6 +57,19 @@ for VIM settings.")
   "[ 	]\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
+
+(defun vimvars-should-obey-modeline ()
+  "Returns non-nil if a VIM modeline should be obeyed in this file."
+  ;; Always return nil if vimvars-enabled is nil.
+  ;; Otherwise, if there are Emacs local variables for this file, 
+  ;; return nil unless vimvars-ignore-mode-line-if-local-variables-exist
+  ;; is also nil.
+  (if noninteractive
+      nil
+    (and vimvars-enabled
+	 (or vimvars-ignore-mode-line-if-local-variables-exist
+	     (not file-local-variables-alist)))))
+  
 
 (defvar vimvars-buffer-coding-system-bom-transitions
   ;; (Current On Off)
@@ -68,23 +99,25 @@ for VIM settings.")
   "Check the top of a file for VIM-style settings, and obey them.
 Only the first `vimvars-chars-in-file-head' characters of the file 
 are checked for VIM variables.   You can use this in `find-file-hook'."
-  ;; Look for something like this: vi: set sw=4 ts=4:
-  ;; We should look for it in a comment, but for now
-  ;; we won't worry about the syntax of the major mode.
-  (save-excursion
-    (goto-char (point-min))
-    (if (re-search-forward vimvars-modeline-re 512 t)
-	(let ((settings-end (match-end 3)))
-	  ;; We ignore the local suffix, since for Emacs
-	  ;; most settings will be buffer-local anyway.
-	  (message "found VIM settings %s" (match-string 2))
-	  (goto-char (match-beginning 3))
-	  (while (re-search-forward 
-		  " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
-	    (let ((variable (vimvars-expand-option-name (match-string 1))))
-	      (if (match-string 2)
-		  (vimvars-assign variable (match-string 3))
-		(vimvars-enable variable))))))))
+  (when (vimvars-should-obey-modeline)
+    (save-excursion
+      ;; Look for something like this: vi: set sw=4 ts=4:
+      ;; We should look for it in a comment, but for now
+      ;; we won't worry about the syntax of the major mode.
+      (goto-char (point-min))
+      (if (re-search-forward vimvars-modeline-re
+			     (line-end-position vimvars-check-lines) t)
+	  (let ((settings-end (match-end 3)))
+	    ;; We ignore the local suffix, since for Emacs
+	    ;; most settings will be buffer-local anyway.
+	    (message "found VIM settings %s" (match-string 2))
+	    (goto-char (match-beginning 3))
+	    (while (re-search-forward 
+		    " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
+	      (let ((variable (vimvars-expand-option-name (match-string 1))))
+		(if (match-string 2)
+		    (vimvars-assign variable (match-string 3))
+		  (vimvars-enable-feature variable)))))))))
 
 (defun vimvars-set-indent (indent)
   (when (equal major-mode 'c-mode) (setq c-basic-offset indent)))
@@ -134,7 +167,7 @@ for utf-16 since we don't know what to do."
 ;; fileformat
 ;; tags
 ;; textmode (but this is obsolete in VIM, replaced by fileformat)
-(defun vimvars-enable (var)
+(defun vimvars-enable-feature (var)
   "Emulate VIM's :set FEATURE."
   (message "Enabling VIM option %s in %s" var (buffer-name))
   (cond 
@@ -151,5 +184,6 @@ for utf-16 since we don't know what to do."
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
+
 
 (provide 'vimvars)
