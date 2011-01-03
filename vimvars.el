@@ -64,11 +64,9 @@ local variables."
   ;; Otherwise, if there are Emacs local variables for this file, 
   ;; return nil unless vimvars-ignore-mode-line-if-local-variables-exist
   ;; is also nil.
-  (if noninteractive
-      nil
-    (and vimvars-enabled
-	 (or vimvars-ignore-mode-line-if-local-variables-exist
-	     (not file-local-variables-alist)))))
+  (and vimvars-enabled
+       (or vimvars-ignore-mode-line-if-local-variables-exist
+	   (not file-local-variables-alist))))
   
 
 (defvar vimvars-buffer-coding-system-bom-transitions
@@ -106,7 +104,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
       ;; we won't worry about the syntax of the major mode.
       (goto-char (point-min))
       (if (re-search-forward vimvars-modeline-re
-			     (line-end-position vimvars-check-lines) t)
+		 (line-end-position vimvars-check-lines) t)
 	  (let ((settings-end (match-end 3)))
 	    ;; We ignore the local suffix, since for Emacs
 	    ;; most settings will be buffer-local anyway.
