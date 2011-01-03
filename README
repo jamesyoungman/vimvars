@@ -4,7 +4,7 @@ your Emacs editor obey the vi-oriented settings your collaborators put
 in the file, so that when you start working on their project, your
 code is correctly laid out from the start.
 
-To use this library, just put vimvars.el in a directory on your path
+To use this library, just put vimvars.el in a directory on your load-path
 and add this to your .emacs file:
 
 ;;; Basic VIM tolerance
