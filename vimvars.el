@@ -52,9 +52,11 @@ local variables."
 
 ;; It appears that real VIM accepts backslash-escaped characters (for
 ;; example \\| inside makeprg).
-(defvar vimvars-modeline-re 
+;;
+;; Also, VIM accepts vi: and vim: at start-of line (but not ex:)
+(defconst vimvars-modeline-re 
   ;; FIXME: accept vi: at start-of-line (but not ex:)
-  "[ 	]\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
+  "\\(^\\|[ 	]\\)\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
 
@@ -64,9 +66,11 @@ local variables."
   ;; Otherwise, if there are Emacs local variables for this file, 
   ;; return nil unless vimvars-ignore-mode-line-if-local-variables-exist
   ;; is also nil.
-  (and vimvars-enabled
-       (or vimvars-ignore-mode-line-if-local-variables-exist
-	   (not file-local-variables-alist))))
+  (when vimvars-enabled
+    (if file-local-variables-alist
+        (not vimvars-ignore-mode-line-if-local-variables-exist)
+      t)))
+
   
 
 (defvar vimvars-buffer-coding-system-bom-transitions
@@ -93,6 +97,16 @@ local variables."
    system, so it would probably be a bad idea to put that in this list.")
 
 
+(defun vimvars-accept-tag (leader tag)
+  "Returns non-nil if LEADER followed by TAG should be accepted as a modeline."
+  (cond 
+   ((equal "vim" tag) t)
+   ((equal "vi" tag) t)
+   ;; Accept "ex:" only when it is not at the beginning of a line.
+   ((equal "ex" tag) (not (equal 0 (length leader))))
+   (t nil)))
+
+
 (defun vimvars-obey-vim-modeline ()
   "Check the top of a file for VIM-style settings, and obey them.
 Only the first `vimvars-chars-in-file-head' characters of the file 
@@ -103,22 +117,28 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
       ;; We should look for it in a comment, but for now
       ;; we won't worry about the syntax of the major mode.
       (goto-char (point-min))
-      (if (re-search-forward vimvars-modeline-re
-		 (line-end-position vimvars-check-lines) t)
-	  (let ((settings-end (match-end 3)))
-	    ;; We ignore the local suffix, since for Emacs
-	    ;; most settings will be buffer-local anyway.
-	    (message "found VIM settings %s" (match-string 2))
-	    (goto-char (match-beginning 3))
-	    (while (re-search-forward 
-		    " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
-	      (let ((variable (vimvars-expand-option-name (match-string 1))))
-		(if (match-string 2)
-		    (vimvars-assign variable (match-string 3))
-		  (vimvars-enable-feature variable)))))))))
+      (if (and
+           (re-search-forward vimvars-modeline-re
+		  (line-end-position vimvars-check-lines) t)
+           (vimvars-accept-tag (match-string 1) (match-string 2)))
+          (progn
+            (message "found a modeline: %s" (match-string 0))
+            (let ((settings-end (match-end 4)))
+	;; We ignore the local suffix, since for Emacs
+	;; most settings will be buffer-local anyway.
+	;;(message "found VIM settings %s" (match-string 4))
+	(goto-char (match-beginning 4))
+	(while (re-search-forward 
+	        " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
+	  (let ((variable (vimvars-expand-option-name (match-string 1))))
+	    (if (match-string 3)
+	        (vimvars-assign variable (match-string 3))
+	      (vimvars-enable-feature variable))))))))))
+
 
 (defun vimvars-set-indent (indent)
   (when (equal major-mode 'c-mode) (setq c-basic-offset indent)))
+
 
 (defun vimvars-expand-option-name (option)
   "Expand a VIM option abbreviation."
@@ -131,6 +151,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 		  ("tw" "textwidth")))))
     (if expansion (cadr expansion) option)))
    
+
 ;;; Not supported:
 ;;; comments/com (comment leader), because it's not language-specific in VIM.
 (defun vimvars-assign (var val)
@@ -182,6 +203,5 @@ for utf-16 since we don't know what to do."
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
-
 
 (provide 'vimvars)
