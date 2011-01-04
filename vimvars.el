@@ -133,7 +133,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 ;;; Not supported:
 ;;; comments/com (comment leader), because it's not language-specific in VIM.
 (defun vimvars-assign (var val)
-  "Emumate VIM's :set VAR=VAL."
+  "Emulate VIM's :set VAR=VAL."
   (message "Setting VIM option %s to %s in %s" var val (buffer-name))
   (cond 
    ((equal var "makeprg") (setq compile-command val))
