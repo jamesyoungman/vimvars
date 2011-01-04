@@ -54,8 +54,11 @@ local variables."
 ;; example \\| inside makeprg).
 ;;
 ;; Also, VIM accepts vi: and vim: at start-of line (but not ex:)
+;;
+;; Google Code search can be helpful in assessing what options are widely used,
+;; for example see
+;; <http://codesearch.google.com/codesearch?q=(ex|vim%3F):\+(se\+|setlocal)>
 (defconst vimvars-modeline-re 
-  ;; FIXME: accept vi: at start-of-line (but not ex:)
   "\\(^\\|[ 	]\\)\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
@@ -164,5 +167,9 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
+
+;;; TODO:
+;;; expandtab 
+;;; 
 
 (provide 'vimvars)

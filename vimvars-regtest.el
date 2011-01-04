@@ -231,6 +231,12 @@ The value of the final expression in BODY is returned."
      (assert-equal 'tab-width 14)
      (assert-equal 'fill-column 40)))  ; fill-column should be unchanged
   
+  (check "test-accept-no-space-before-final-colon" 
+    "Check modelines work even without a space before the final colon."
+    (run-checks-for-text-file
+     "# vi: set ts=18:\n" 
+     (assert-equal 'tab-width 18)))
+  
   (check "test-accept-ex-modeline" 
     "Check ex modelines work."
     (run-checks-for-text-file
@@ -241,6 +247,24 @@ The value of the final expression in BODY is returned."
     "Check vi (as opposed to vim) modelines work."
     (run-checks-for-text-file
      "# vi: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-set" 
+    "Verify that we recognise modelines with 'set'."
+    (run-checks-for-text-file
+     "# vi: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-setlocal" 
+    "Verify that we recognise modelines with setlocal."
+    (run-checks-for-text-file
+     "# vi: setlocal ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-se" 
+    "Verify that we recognise modelines with 'se' instead of 'set'."
+    (run-checks-for-text-file
+     "# vi: se ts=18 :\n" 
      (assert-equal 'tab-width 18)))
   
   (check "test-accept-extra-spaces" 
