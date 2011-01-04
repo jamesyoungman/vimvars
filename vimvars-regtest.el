@@ -299,7 +299,7 @@ The value of the final expression in BODY is returned."
 
 
 (define-test-suite test-misc
-  "test makeprg, ignorecase, noignorecase, wrap, nowrap"
+  "test makeprg, ignorecase, noignorecase, wrap, nowrap, textwidth"
 
   (check "makeprg" 
     "Check makeprg=blah works."
@@ -333,33 +333,40 @@ The value of the final expression in BODY is returned."
    (check "nowrap"
      (run-checks-for-text-file 
       "This is a text file.\n# vim: set nowrap :\n"
-      (assert-true 'truncate-lines)))))
+      (assert-true 'truncate-lines))))
+
+  (check "test-textwidth-87" 
+    (run-checks-for-text-file
+     "This is a text file.\n# vim: set tw=87 :\n" 
+     (assert-equal 'tab-width 14)
+     (assert-equal 'fill-column 87))))
 
 
 (define-test-suite test-readonly
   "test readonnly, noreadonly, write, nowrite"
 
-   (check "readonly"
-     (run-checks-for-text-file 
-      "This is a text file.\n# vim: set readonly :\n" 
-      (assert-true 'buffer-read-only)))
-
-   ;; This test doesn't really do anything useful, since
-   ;; not read-only is the default anyway.
-   (check "noreadonly"
-     (run-checks-for-text-file 
-      "This is a text file.\n# vim: set noreadonly :\n" 
-      (assert-false 'buffer-read-only)))
-
-   (check "write"
-     (run-checks-for-text-file 
-      "This is a text file.\n# vim: set write :\n" 
-      (assert-false 'buffer-read-only)))
-
-   (check "nowrite"
-     (run-checks-for-text-file 
-      "This is a text file.\n# vim: set nowrite :\n" 
-      (assert-true 'buffer-read-only))))
+  (check "readonly"
+    (run-checks-for-text-file 
+     "This is a text file.\n# vim: set readonly :\n" 
+     (assert-true 'buffer-read-only)))
+  
+  ;; This test doesn't really do anything useful, since
+  ;; not read-only is the default anyway.
+  (check "noreadonly"
+    (run-checks-for-text-file 
+     "This is a text file.\n# vim: set noreadonly :\n" 
+     (assert-false 'buffer-read-only)))
+  
+  (check "write"
+    (run-checks-for-text-file 
+     "This is a text file.\n# vim: set write :\n" 
+     (assert-false 'buffer-read-only)))
+  
+  (check "nowrite"
+    (run-checks-for-text-file 
+     "This is a text file.\n# vim: set nowrite :\n" 
+     (assert-true 'buffer-read-only))))
+  
     
 
 
@@ -382,7 +389,7 @@ The value of the final expression in BODY is returned."
 
 
 (define-test-suite test-tabstop
-  "tab stop and fill column tests"
+  "tab stop and tab expansion"
   (check "test-ts-18" 
     "Check ts=X works."
     (run-checks-for-text-file 
@@ -390,13 +397,21 @@ The value of the final expression in BODY is returned."
      (assert-equal 'tab-width 18)
      (assert-equal 'fill-column 40)))
   
-  (check "test-tw-87" 
-    "Check tw=X works."
-    (run-checks-for-text-file
-     "This is a text file.\n# vim: set tw=87 :\n" 
-     (assert-equal 'tab-width 14)
-     (assert-equal 'fill-column 87))))
-
+  (check "test-expandtab" 
+    "Check expandtabs works."
+    (with-temp-default
+     indent-tabs-mode t
+     (run-checks-for-text-file 
+      "# vim: set expandtab :\n" 
+      (assert-false 'indent-tabs-mode))))
+  
+  (check "test-noexpandtab" 
+    "Check noexpandtabs works."
+    (with-temp-default
+     indent-tabs-mode nil
+     (run-checks-for-text-file 
+      "# vim: set noexpandtab :\n" 
+      (assert-true 'indent-tabs-mode)))))
 
 (define-test-suite test-local-vars-interaction
   "checks for interactions with Emacs local variables"

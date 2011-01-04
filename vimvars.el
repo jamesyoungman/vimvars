@@ -156,20 +156,18 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
   "Emulate VIM's :set FEATURE."
   (message "Enabling VIM option %s in %s" var (buffer-name))
   (cond 
+   ((equal var "expandtab") (setq indent-tabs-mode nil))
    ((equal var "ignorecase") (setq case-fold-search t))
    ((equal var "readonly") (toggle-read-only 1))
    ((equal var "wrap") (setq truncate-lines nil))
    ((equal var "write") (toggle-read-only -1)) ; Similar, not the same.
    
+   ((equal var "noexpandtab") (setq indent-tabs-mode t))
    ((equal var "noignorecase") (setq case-fold-search nil))
    ((equal var "noreadonly") (toggle-read-only -1))
    ((equal var "nowrap") (setq truncate-lines t))
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
-
-;;; TODO:
-;;; expandtab 
-;;; 
 
 (provide 'vimvars)
