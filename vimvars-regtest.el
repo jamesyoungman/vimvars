@@ -224,12 +224,65 @@ The value of the final expression in BODY is returned."
 (define-test-suite test-modeline-format
   "modeline format"
   
+  (check "test-accept-vim-set" 
+    "Verify that we recognise vim modelines with 'set'."
+    (run-checks-for-text-file
+     "# vim: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-vi-set" 
+    "Verify that we recognise vi modelines with 'set'."
+    (run-checks-for-text-file
+     "# vi: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-ex-set" 
+    "Verify that we recognise ex modelines with 'set'."
+    (run-checks-for-text-file
+     "# ex: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-vim-se" 
+    "Verify that we recognise vim modelines with 'se'."
+    (run-checks-for-text-file
+     "# vim: se ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-vi-se" 
+    "Verify that we recognise vi modelines with 'se'."
+    (run-checks-for-text-file
+     "# vi: se ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-ex-se" 
+    "Verify that we recognise ex modelines with 'se'."
+    (run-checks-for-text-file
+     "# ex: se ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-vim-setlocal" 
+    "Verify that we recognise 'vim: setlocal'."
+    (run-checks-for-text-file
+     "# vim: setlocal ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-vi-setlocal" 
+    "Verify that we recognise 'vi: setlocal'."
+    (run-checks-for-text-file
+     "# vi: setlocal ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-ex-setlocal" 
+    "Verify that we recognise 'ex: setlocal'."
+    (run-checks-for-text-file
+     "# ex: setlocal ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
   (check "test-require-trailing-colon" 
     "Check that we ignore modelines with no trailing colon."
     (run-checks-for-text-file 
      "This is a text file.\n# vim: set ts=18 \n" 
-     (assert-equal 'tab-width 14)
-     (assert-equal 'fill-column 40)))  ; fill-column should be unchanged
+     (assert-equal 'tab-width 14))) ; i.e. unchanged from default.
   
   (check "test-accept-no-space-before-final-colon" 
     "Check modelines work even without a space before the final colon."
@@ -237,40 +290,16 @@ The value of the final expression in BODY is returned."
      "# vi: set ts=18:\n" 
      (assert-equal 'tab-width 18)))
   
-  (check "test-accept-ex-modeline" 
-    "Check ex modelines work."
-    (run-checks-for-text-file
-     "# ex: set ts=18 :\n" 
-     (assert-equal 'tab-width 18)))
-  
-  (check "test-accept-vi-modeline" 
-    "Check vi (as opposed to vim) modelines work."
-    (run-checks-for-text-file
-     "# vi: set ts=18 :\n" 
-     (assert-equal 'tab-width 18)))
-  
-  (check "test-accept-set" 
-    "Verify that we recognise modelines with 'set'."
-    (run-checks-for-text-file
-     "# vi: set ts=18 :\n" 
-     (assert-equal 'tab-width 18)))
-  
-  (check "test-accept-setlocal" 
-    "Verify that we recognise modelines with setlocal."
-    (run-checks-for-text-file
-     "# vi: setlocal ts=18 :\n" 
-     (assert-equal 'tab-width 18)))
-  
-  (check "test-accept-se" 
-    "Verify that we recognise modelines with 'se' instead of 'set'."
-    (run-checks-for-text-file
-     "# vi: se ts=18 :\n" 
-     (assert-equal 'tab-width 18)))
-  
   (check "test-accept-extra-spaces" 
     "Check extra spaces before vi: are accepted."
     (run-checks-for-text-file
      "#   vi: set ts=18 :\n" 
+     (assert-equal 'tab-width 18)))
+  
+  (check "test-accept-tab" 
+    "Check tabs before vi: are accepted."
+    (run-checks-for-text-file
+     "#\tvi: set ts=18 :\n" 
      (assert-equal 'tab-width 18)))
   
   (check "test-accept-vi-at-start" 
