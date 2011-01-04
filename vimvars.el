@@ -72,31 +72,6 @@ local variables."
       t)))
 
   
-
-(defvar vimvars-buffer-coding-system-bom-transitions
-  ;; (Current On Off)
-  '(("utf-8" "utf-8-with-signature" nil)
-    ("utf-8-auto" "utf-8-with-signature" "utf-8")
-    ("utf-8-with-signature" nil "utf-8-with-signature")
-    ("utf-16le" "utf-16le-with-signature" nil)
-    ("utf-16be" "utf-16be-with-signature" nil)
-    ("utf-16le-with-signature" nil "utf-16le")
-    ("utf-16be-with-signature" nil "utf-16be")
-    ;; coding system utf-16 chooses byte order based on the BOM,
-    ;; but to select a specific coding system, we'd need to know
-    ;; if the actual BOM is little-endian or big-endian.
-    ("utf-16" nil nil))
-  "Transition table for turning BOM marking on or off.
-   Each element of the list is a list of 3 coding system names:
-   (CURRENT ON OFF)
-   If the current coding system is CURRENT, go to ON to turn use of a 
-   byte-order-mark on, go to OFF to turn if OFF.  nil means, don't change
-   the coding system.
-   
-   Visiting a file literally results in the use of the no-conversion coding
-   system, so it would probably be a bad idea to put that in this list.")
-
-
 (defun vimvars-accept-tag (leader tag)
   "Returns non-nil if LEADER followed by TAG should be accepted as a modeline."
   (cond 
@@ -166,37 +141,23 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    (t (message "Don't know how to emulate VIM variable %s" var))))
 
 
-(defun vimvars-select-bom-coding-system (bom)
-  "Choose a new coding system on the basis of whether we want a BOM.
-The result is nil if no transition is needed.  If we don't need a
-BOM, as with latin1, nil is also returned.  Lastly, we return nil
-for utf-16 since we don't know what to do."
-  (let ((transition (assoc buffer-file-coding-system 
-			   vimvars-buffer-coding-system-bom-transitions)))
-    (if state (cadr transition) (car (cdr (cdr transition))))))
-  
-(defun vimvars-set-byte-order-mark (state)
-  "Enable or disable the use of a byte-order mark."
-  (let ((newsystem (vimvars-select-bom-coding-system state)))
-    (when newsystem
-      (set-buffer-coding-system newsystem))))
-
 ;; FIXME: Also consider supporting ...
 ;; fileencoding, encoding could be useful but likely too hairy
 ;; fileformat
 ;; tags
 ;; textmode (but this is obsolete in VIM, replaced by fileformat)
+;; Not supported:
+;; bomb/nobomd (byte order mark control), because I don't expect it is
+;; comonly enough used to justify the maintenance burden.
 (defun vimvars-enable-feature (var)
   "Emulate VIM's :set FEATURE."
   (message "Enabling VIM option %s in %s" var (buffer-name))
   (cond 
-   ((equal var "bomb") (vimvars-select-bom-coding-system t))
    ((equal var "ignorecase") (setq case-fold-search t))
    ((equal var "readonly") (toggle-read-only 1))
    ((equal var "wrap") (setq truncate-lines nil))
    ((equal var "write") (toggle-read-only -1)) ; Similar, not the same.
    
-   ((equal var "nobomb") (vimvars-select-bom-coding-system nil))
    ((equal var "noignorecase") (setq case-fold-search nil))
    ((equal var "noreadonly") (toggle-read-only -1))
    ((equal var "nowrap") (setq truncate-lines t))

@@ -411,5 +411,3 @@ End:
     (test-readonly)
     (test-shiftwidth)
     (test-local-vars-interaction)))
-
-;; TODO: bomb nobomb
