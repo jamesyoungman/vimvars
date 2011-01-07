@@ -3,7 +3,8 @@
 ;; Copyright (C) 2010 James Youngman.
 
 ;; Author: James Youngman <james@youngman.org>
-;; Maintainer: James Youngman
+;; Maintainer: James Youngman <james@youngman.org>
+;; Keywords: local-variables, vi, vim, emulations
 
 ;; vimvars is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -24,6 +25,8 @@
 ;; a hook which checks for a VI-style in the current buffer and sets
 ;; various Emacs buffer-local variables accordingly.
 
+;;; Code:
+
 (defgroup vimvars nil
   "Support for VIM mode lines."
   :group 'find-file)
@@ -37,15 +40,13 @@
 
 
 (defcustom vimvars-check-lines 5
-  "The number of lines in the head of a file that we will search
-for VIM settings (VIM itself checks 5)."
+  "The number of lines in the head of a file that we will search for VIM settings (VIM itself checks 5)."
   :type 'integer
   :group 'vimvars)
 
 
 (defcustom vimvars-ignore-mode-line-if-local-variables-exist t
-  "If non-nil, VIM mode lines are ignored in files that have Emacs 
-local variables."
+  "If non-nil, VIM mode lines are ignored in files that have Emacs local variables."
   :type 'boolean
   :group 'vimvars)
 
@@ -58,15 +59,15 @@ local variables."
 ;; Google Code search can be helpful in assessing what options are widely used,
 ;; for example see
 ;; <http://codesearch.google.com/codesearch?q=(ex|vim%3F):\+(se\+|setlocal)>
-(defconst vimvars-modeline-re 
+(defconst vimvars-modeline-re
   "\\(^\\|[ 	]\\)\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
 
 (defun vimvars-should-obey-modeline ()
-  "Returns non-nil if a VIM modeline should be obeyed in this file."
+  "Return non-nil if a VIM modeline should be obeyed in this file."
   ;; Always return nil if vimvars-enabled is nil.
-  ;; Otherwise, if there are Emacs local variables for this file, 
+  ;; Otherwise, if there are Emacs local variables for this file,
   ;; return nil unless vimvars-ignore-mode-line-if-local-variables-exist
   ;; is also nil.
   (when vimvars-enabled
@@ -76,8 +77,8 @@ local variables."
 
   
 (defun vimvars-accept-tag (leader tag)
-  "Returns non-nil if LEADER followed by TAG should be accepted as a modeline."
-  (cond 
+  "Return non-nil if LEADER followed by TAG should be accepted as a modeline."
+  (cond
    ((equal "vim" tag) t)
    ((equal "vi" tag) t)
    ;; Accept "ex:" only when it is not at the beginning of a line.
@@ -87,7 +88,7 @@ local variables."
 
 (defun vimvars-obey-vim-modeline ()
   "Check the top of a file for VIM-style settings, and obey them.
-Only the first `vimvars-chars-in-file-head' characters of the file 
+Only the first `vimvars-chars-in-file-head' characters of the file
 are checked for VIM variables.   You can use this in `find-file-hook'."
   (when (vimvars-should-obey-modeline)
     (save-excursion
@@ -106,7 +107,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 	;; most settings will be buffer-local anyway.
 	;;(message "found VIM settings %s" (match-string 4))
 	(goto-char (match-beginning 4))
-	(while (re-search-forward 
+	(while (re-search-forward
 	        " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
 	  (let ((variable (vimvars-expand-option-name (match-string 1))))
 	    (if (match-string 3)
@@ -115,12 +116,13 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 
 
 (defun vimvars-set-indent (indent)
+  "Set the amount of indentation caused by tab to INDENT in a mode-aware way."
   (when (equal major-mode 'c-mode) (setq c-basic-offset indent)))
 
 
 (defun vimvars-expand-option-name (option)
-  "Expand a VIM option abbreviation."
-  (let ((expansion 
+  "Expand the abbreviated VIM :set variable OPTION to its full name."
+  (let ((expansion
 	 (assoc option
 		'(("ro" "readonly")
 		  ("sts" "softtabstop")
@@ -135,7 +137,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 (defun vimvars-assign (var val)
   "Emulate VIM's :set VAR=VAL."
   (message "Setting VIM option %s to %s in %s" var val (buffer-name))
-  (cond 
+  (cond
    ((equal var "makeprg") (setq compile-command val))
    ((equal var "shiftwidth") (vimvars-set-indent (string-to-number val)))
    ((equal var "softtabstop") t) ; Ignore.
@@ -153,9 +155,9 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 ;; bomb/nobomd (byte order mark control), because I don't expect it is
 ;; comonly enough used to justify the maintenance burden.
 (defun vimvars-enable-feature (var)
-  "Emulate VIM's :set FEATURE."
+  "Emulate VIM's :set VAR for a variables that are just boolean."
   (message "Enabling VIM option %s in %s" var (buffer-name))
-  (cond 
+  (cond
    ((equal var "expandtab") (setq indent-tabs-mode nil))
    ((equal var "ignorecase") (setq case-fold-search t))
    ((equal var "readonly") (toggle-read-only 1))
@@ -171,3 +173,4 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    (t (message "Don't know how to emulate VIM feature %s" var))))
 
 (provide 'vimvars)
+;;; vimvars.el ends here
