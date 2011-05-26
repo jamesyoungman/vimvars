@@ -1,9 +1,9 @@
 ;;; vimvars.el --- Emacs support for VI modelines
 
-;; Copyright (C) 2010 James Youngman.
+;; Copyright (C) 2010 Free Software Foundation, Inc.
 
-;; Author: James Youngman <james@youngman.org>
-;; Maintainer: James Youngman <james@youngman.org>
+;; Author: James Youngman <youngman@google.com>
+;; Maintainer: James Youngman <youngman@google.com>
 ;; Keywords: local-variables, vi, vim, emulations
 
 ;; vimvars is free software: you can redistribute it and/or modify

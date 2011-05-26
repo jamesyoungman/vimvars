@@ -1,9 +1,9 @@
 ;;; vimvars-regtest.el --- Regression tests for vimvars.el 
 
-;; Copyright (C) 2010 James Youngman.
+;; Copyright (C) 2010 Free Software Foundation, Inc.
 
-;; Author: James Youngman <james@youngman.org>
-;; Maintainer: James Youngman
+;; Author: James Youngman <youngman@google.com>
+;; Maintainer: James Youngman <youngman@google.com>
 
 ;; vimvars is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
