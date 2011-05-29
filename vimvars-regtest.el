@@ -1,6 +1,6 @@
 ;;; vimvars-regtest.el --- Regression tests for vimvars.el 
 
-;; Copyright (C) 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2011 Free Software Foundation, Inc.
 
 ;; Author: James Youngman <youngman@google.com>
 ;; Maintainer: James Youngman <youngman@google.com>
@@ -57,7 +57,7 @@ Evaluate BODY, printing progress messages.   Returns nil if an error occurred."
   (let ((error-var (make-symbol "errordetail")))
     `(condition-case ,error-var
          (progn
-	(princ (format "Running %s" ,name ,description))
+	(princ (format "Running check %s (%s)" ,name ,description))
 	(let ((test-name ,name))
 	  ,@body)
 	(princ ": passed.\n")
@@ -134,27 +134,35 @@ The value of the final expression in BODY is returned."
   "Unit test for vimvars-accept-tag"
   
   (check "test-vim-bol"
+    "Check we accept 'vim:' at beginning of line"
     (assert (vimvars-accept-tag "" "vim")))
   
   (check "test-vim-not-bol"
+    "Check we accept 'vim:' after the beginning of line"
     (assert (vimvars-accept-tag " " "vim")))
 
   (check "test-vi-bol"
+    "Check we accept 'vi:' at beginning of line"
     (assert (vimvars-accept-tag "" "vi")))
   
   (check "test-vi-not-bol"
+    "Check we accept 'vi:' after the beginning of line"
     (assert (vimvars-accept-tag " " "vi")))
 
   (check "test-ex-bol"
+    "Check we accept 'ex:' at beginning of line"
     (assert (not (vimvars-accept-tag "" "ex"))))
   
   (check "test-ex-not-bol"
+    "Check we accept 'ex:' after the beginning of line"
     (assert (vimvars-accept-tag " " "ex")))
 
   (check "test-foo-bol"
+    "Check we do not accept 'foo:' at beginning of line"
     (assert (not (vimvars-accept-tag "" "foo"))))
 
   (check "test-foo-not-bol"
+    "Check we do not accept 'foo:' after beginning of line"
     (assert (not (vimvars-accept-tag " " "foo")))))
 
 
@@ -162,6 +170,7 @@ The value of the final expression in BODY is returned."
   "Unit test for vimvars-should-obey-modeline"
 
   (check "test-vimvars-enabled-nil"
+    "Verify that we obey vimvars-enabled when it is nil"
     (let ((vimvars-enabled nil)
           (file-local-variables-alist nil)
           (vimvars-ignore-mode-line-if-local-variables-exist nil))
@@ -169,6 +178,7 @@ The value of the final expression in BODY is returned."
 	        t "case 1")))
 
   (check "test-no-local-variables"
+    "Verify that we obey vi mode lines in the absence of local variables"
     (let ((vimvars-enabled t)
           (file-local-variables-alist nil)
           (vimvars-ignore-mode-line-if-local-variables-exist nil))
@@ -176,6 +186,7 @@ The value of the final expression in BODY is returned."
 	   t "case 2")))
 
   (check "test-with-local-variables"
+    "Verify that we ignore vi mode lines if there are local variables"
     (let ((vimvars-enabled t)
           (file-local-variables-alist '((tab-width . 8)))
           (vimvars-ignore-mode-line-if-local-variables-exist t))
@@ -183,6 +194,7 @@ The value of the final expression in BODY is returned."
 	   t "case 3")))
 
   (check "test-with-both"
+    "Verify that we use both vi mode lines and local variables if vimvars-ignore-mode-line-if-local-variables-exist is nil"
     (let ((vimvars-enabled t)
           (file-local-variables-alist '((tab-width . 8)))
           (vimvars-ignore-mode-line-if-local-variables-exist nil))
@@ -194,6 +206,7 @@ The value of the final expression in BODY is returned."
   "Unit test for vimvars-expand-option-name"
 
   (check "test-expansions"
+    "Check expansion of ro, sts, sw, ts, tw"
     (assert (equal (vimvars-expand-option-name "ro") "readonly"))
     (assert (equal (vimvars-expand-option-name "sts") "softtabstop"))
     (assert (equal (vimvars-expand-option-name "sw") "shiftwidth"))
@@ -201,6 +214,7 @@ The value of the final expression in BODY is returned."
     (assert (equal (vimvars-expand-option-name "tw") "textwidth")))
   
   (check "test-nonexpansions"
+    "Check we don't 'expand' something that's not an abbreviation"
     (assert (equal (vimvars-expand-option-name "blehbleh") "blehbleh"))))
 
     
@@ -287,15 +301,28 @@ The value of the final expression in BODY is returned."
      "ex: set ts=18 :\n" 
      (assert-equal 'tab-width 14)))
   
-  (check "test-modeline-too-far" 
+  (check "test-modeline-too-far-from-top" 
     "Check we ignore mode lines more than `vimvars-check-lines' into the file."
     (run-checks-for-text-file
-     "Mode lines at line 6 should be ignored\n\n\n\n\n# vim: set ts=6 :\n" 
+     "Mode lines at line 6 should be ignored\n\n\n\n\n# vim: set ts=6 :\n\n\n\n\n\n\n" 
      (assert-equal 'tab-width 14))
     
     (run-checks-for-text-file
      "Mode lines at line 5 should be accepted.\n\n\n\n# vim: set ts=10 :\n" 
-     (assert-equal 'tab-width 10))))
+     (assert-equal 'tab-width 10)))
+
+  (check "test-modeline-too-far-from-bottom" 
+    "Check we only accept mode lines within `vimvars-check-lines' of EOF."
+    (run-checks-for-text-file
+     "Mode lines 5 lines from EOF should be accepted.\n\n\n\n\n\n
+# vim: set ts=10 :\n\n\n\n\n" 
+     (assert-equal 'tab-width 10))
+        
+    (run-checks-for-text-file
+     "Mode lines 6 lines from EOF should be ignored.\n\n\n\n\n\n
+# vim: set ts=10 :\n\n\n\n\n\n\n" 
+     (assert-equal 'tab-width 14))
+    ))
 
 
 (define-test-suite test-misc
@@ -310,6 +337,7 @@ The value of the final expression in BODY is returned."
   (with-temp-default 
    case-fold-search t
    (check "noignorecase"
+     "Verify that we obey 'set noignorecase'"
      (run-checks-for-text-file 
       "This is a text file.\n# vim: set noignorecase :\n" 
       (assert-false 'case-fold-search))))
@@ -317,6 +345,7 @@ The value of the final expression in BODY is returned."
   (with-temp-default
    case-fold-search nil
    (check "ignorecase"
+     "Verify that we obey 'set ignorecase'"
      (run-checks-for-text-file 
       "This is a text file.\n# vim: set ignorecase :\n" 
       (assert-true 'case-fold-search))))
@@ -324,6 +353,7 @@ The value of the final expression in BODY is returned."
   (with-temp-default
    truncate-lines t
    (check "wrap"
+     "Verify that we obey 'set wrap'"
      (run-checks-for-text-file 
       "This is a text file.\n# vim: set wrap :\n" 
       (assert-false 'truncate-lines))))
@@ -331,11 +361,13 @@ The value of the final expression in BODY is returned."
   (with-temp-default
    truncate-lines nil
    (check "nowrap"
+     "Verify that we obey 'set nowrap'"
      (run-checks-for-text-file 
       "This is a text file.\n# vim: set nowrap :\n"
       (assert-true 'truncate-lines))))
 
   (check "test-textwidth-87" 
+     "Verify that we obey 'set tw=N'"
     (run-checks-for-text-file
      "This is a text file.\n# vim: set tw=87 :\n" 
      (assert-equal 'tab-width 14)
@@ -346,6 +378,7 @@ The value of the final expression in BODY is returned."
   "test readonnly, noreadonly, write, nowrite"
 
   (check "readonly"
+    "Verify that we obey 'set readonly'"
     (run-checks-for-text-file 
      "This is a text file.\n# vim: set readonly :\n" 
      (assert-true 'buffer-read-only)))
@@ -353,16 +386,19 @@ The value of the final expression in BODY is returned."
   ;; This test doesn't really do anything useful, since
   ;; not read-only is the default anyway.
   (check "noreadonly"
+    "Verify that we obey 'set noreadonly'"
     (run-checks-for-text-file 
      "This is a text file.\n# vim: set noreadonly :\n" 
      (assert-false 'buffer-read-only)))
   
   (check "write"
+    "Verify that we obey 'set write'"
     (run-checks-for-text-file 
      "This is a text file.\n# vim: set write :\n" 
      (assert-false 'buffer-read-only)))
   
   (check "nowrite"
+    "Verify that we obey 'set nowrite'"
     (run-checks-for-text-file 
      "This is a text file.\n# vim: set nowrite :\n" 
      (assert-true 'buffer-read-only))))
@@ -374,6 +410,7 @@ The value of the final expression in BODY is returned."
   "Check sw=N works."
 
   (check "sw-2"
+    "Verify 'set sw=2' works in C source files."
     (run-checks-for-file-body
      ".c"
      "/* This is a C source file.\n vim: set sw=2 :\n*/\n" 
@@ -382,6 +419,7 @@ The value of the final expression in BODY is returned."
   ;; Do a different check with a distinct c-basic-offset so that
   ;; we can tell for sure we're actually changing it.
   (check "sw-4"
+    "Verify 'set sw=4' works in C source files."
     (run-checks-for-file-body
      ".c"
      "/* This is a C source file.\n vim: set sw=4 :\n*/\n" 
@@ -440,7 +478,7 @@ End:
 
 
 (let
-    ((debug-on-error t))
+    ((debug-on-error nil))
   (with-output-to-temp-buffer "*Unit Test Results*"
     (unit-test-accept-tag)
     (unit-test-vimvars-should-obey-modeline)

@@ -40,7 +40,7 @@
 
 
 (defcustom vimvars-check-lines 5
-  "The number of lines in the head of a file that we will search for VIM settings (VIM itself checks 5)."
+  "The number of lines in the top or bottom of a file that we will search for VIM settings (VIM itself checks 5)."
   :type 'integer
   :group 'vimvars)
 
@@ -86,33 +86,58 @@
    (t nil)))
 
 
+(defun vimvars-obey-this-vim-modeline ()
+  "Obey the mode line in the current regex match string."
+  (message "found a modeline: %s" (match-string 0))
+  (let ((settings-end (match-end 4)))
+    ;; We ignore the local suffix, since for Emacs
+    ;; most settings will be buffer-local anyway.
+    ;;(message "found VIM settings %s" (match-string 4))
+    (goto-char (match-beginning 4))
+    ;; Look for something like this: vi: set sw=4 ts=4:
+    ;; We should look for it in a comment, but for now
+    ;; we won't worry about the syntax of the major mode.
+    (while (re-search-forward
+            " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
+      (let ((variable (vimvars-expand-option-name (match-string 1))))
+        (if (match-string 3)
+            (vimvars-assign variable (match-string 3))
+          (vimvars-enable-feature variable)))))
+  t)
+
+
+(defun vimvars-obey-top-modeline ()
+  "Check for, and if found, obey a mode line at the top of the file.
+This function moves point."
+  (goto-char (point-min))
+  (if (and
+       (re-search-forward vimvars-modeline-re
+	            (line-end-position vimvars-check-lines) t)
+       (vimvars-accept-tag (match-string 1) (match-string 2)))
+      (vimvars-obey-this-vim-modeline)))
+
+  
+(defun vimvars-obey-bottom-modeline ()
+  "Check for, and if found, obey a mode line at the botom of the file.
+This function moves point."
+  (goto-char (point-max))
+  (if (and
+       (re-search-backward vimvars-modeline-re 
+	             (line-beginning-position 
+		(- 1 vimvars-check-lines)) t)
+       (vimvars-accept-tag (match-string 1) (match-string 2)))
+      (vimvars-obey-this-vim-modeline)))
+  
+
 (defun vimvars-obey-vim-modeline ()
-  "Check the top of a file for VIM-style settings, and obey them.
-Only the first `vimvars-chars-in-file-head' characters of the file
+  "Check the top and bottom of a file for VIM-style settings, and obey them.
+Only the first and last `vimvars-check-lines' lines of the file
 are checked for VIM variables.   You can use this in `find-file-hook'."
   (when (vimvars-should-obey-modeline)
     (save-excursion
-      ;; Look for something like this: vi: set sw=4 ts=4:
-      ;; We should look for it in a comment, but for now
-      ;; we won't worry about the syntax of the major mode.
-      (goto-char (point-min))
-      (if (and
-           (re-search-forward vimvars-modeline-re
-		  (line-end-position vimvars-check-lines) t)
-           (vimvars-accept-tag (match-string 1) (match-string 2)))
-          (progn
-            (message "found a modeline: %s" (match-string 0))
-            (let ((settings-end (match-end 4)))
-	;; We ignore the local suffix, since for Emacs
-	;; most settings will be buffer-local anyway.
-	;;(message "found VIM settings %s" (match-string 4))
-	(goto-char (match-beginning 4))
-	(while (re-search-forward
-	        " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
-	  (let ((variable (vimvars-expand-option-name (match-string 1))))
-	    (if (match-string 3)
-	        (vimvars-assign variable (match-string 3))
-	      (vimvars-enable-feature variable))))))))))
+      (or (vimvars-obey-top-modeline)
+          (vimvars-obey-bottom-modeline)))))
+
 
 
 (defun vimvars-set-indent (indent)
@@ -155,7 +180,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 ;; bomb/nobomd (byte order mark control), because I don't expect it is
 ;; comonly enough used to justify the maintenance burden.
 (defun vimvars-enable-feature (var)
-  "Emulate VIM's :set VAR for a variables that are just boolean."
+  "Emulate VIM's :set VAR for variables that are just boolean."
   (message "Enabling VIM option %s in %s" var (buffer-name))
   (cond
    ((equal var "expandtab") (setq indent-tabs-mode nil))
