@@ -11,7 +11,7 @@ code is correctly laid out from the start.
 To use this library, just put vimvars.el in a directory on your load-path
 and add this to your .emacs file:
 
-```
+```elisp
 ;;; Basic VIM tolerance
 (require 'vimvars)
 (add-hook 'find-file-hook 'vimvars-obey-vim-modeline)
@@ -27,4 +27,6 @@ tests are in `vimvars-regtest.el`.
 This means that for the time being, you need a long cumbersome
 command-line to run the tests:
 
+```sh
 emacs -batch -l ert -l vimvars.el -l vimvars-tests.el -l vimvars-regtest.el -f ert-run-tests-batch-and-exit
+```
