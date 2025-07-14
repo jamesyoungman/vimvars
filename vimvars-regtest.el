@@ -72,20 +72,20 @@ Evaluate BODY, printing progress messages.   Returns nil if an error occurred."
   (let* ((value (symbol-value varname))
          (failmsg (format "Expected %s to be %s, but it is %s"
                           varname expected-value value)))
-    (assert (equal value expected-value) t failmsg)))
+    (cl-assert (equal value expected-value) t failmsg)))
 
 
 (defun assert-true (varname)
   (let* ((value (symbol-value varname))
          (failmsg (format "Expected %s to be true, but it is nil" varname)))
-    (assert (not (not value)) t failmsg)))
+    (cl-assert (not (not value)) t failmsg)))
 
 
 (defun assert-false (varname)
   (let* ((value (symbol-value varname))
          (failmsg (format "Expected %s to be nil, but it is %s"
                           varname value)))
-    (assert (not value) t failmsg)))
+    (cl-assert (not value) t failmsg)))
 
 
 (defmacro with-temp-default (varname temp-value &rest body)
