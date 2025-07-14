@@ -11,9 +11,11 @@ code is correctly laid out from the start.
 To use this library, just put vimvars.el in a directory on your load-path
 and add this to your .emacs file:
 
+```
 ;;; Basic VIM tolerance
 (require 'vimvars)
 (add-hook 'find-file-hook 'vimvars-obey-vim-modeline)
+```
 
 ## How To Test The Code
 
