@@ -28,5 +28,7 @@ This means that for the time being, you need a long cumbersome
 command-line to run the tests:
 
 ```sh
-emacs -batch -l ert -l vimvars.el -l vimvars-tests.el -l vimvars-regtest.el -f ert-run-tests-batch-and-exit
+emacs -batch \
+  -l ert -l vimvars.el -l vimvars-tests.el -l vimvars-regtest.el \
+  -f ert-run-tests-batch-and-exit
 ```
