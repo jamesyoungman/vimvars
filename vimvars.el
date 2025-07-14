@@ -60,7 +60,7 @@
 ;; for example see
 ;; <http://codesearch.google.com/codesearch?q=(ex|vim%3F):\+(se\+|setlocal)>
 (defconst vimvars-modeline-re
-  "\\(^\\|[ 	]\\)\\(ex\\|vim?\\):[	 ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
+  "\\(^\\|[ \t]\\)\\(ex\\|vim?\\):[\t ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
 
@@ -75,7 +75,7 @@
         (not vimvars-ignore-mode-line-if-local-variables-exist)
       t)))
 
-  
+
 (defun vimvars-accept-tag (leader tag)
   "Return non-nil if LEADER followed by TAG should be accepted as a modeline."
   (cond
@@ -112,22 +112,22 @@ This function moves point."
   (goto-char (point-min))
   (if (and
        (re-search-forward vimvars-modeline-re
-	            (line-end-position vimvars-check-lines) t)
+                    (line-end-position vimvars-check-lines) t)
        (vimvars-accept-tag (match-string 1) (match-string 2)))
       (vimvars-obey-this-vim-modeline)))
 
-  
+
 (defun vimvars-obey-bottom-modeline ()
   "Check for, and if found, obey a mode line at the botom of the file.
 This function moves point."
   (goto-char (point-max))
   (if (and
-       (re-search-backward vimvars-modeline-re 
-	             (line-beginning-position 
-		(- 1 vimvars-check-lines)) t)
+       (re-search-backward vimvars-modeline-re
+                     (line-beginning-position
+                (- 1 vimvars-check-lines)) t)
        (vimvars-accept-tag (match-string 1) (match-string 2)))
       (vimvars-obey-this-vim-modeline)))
-  
+
 
 (defun vimvars-obey-vim-modeline ()
   "Check the top and bottom of a file for VIM-style settings, and obey them.
@@ -148,14 +148,14 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 (defun vimvars-expand-option-name (option)
   "Expand the abbreviated VIM :set variable OPTION to its full name."
   (let ((expansion
-	 (assoc option
-		'(("ro" "readonly")
-		  ("sts" "softtabstop")
-		  ("sw" "shiftwidth")
-		  ("ts" "tabstop")
-		  ("tw" "textwidth")))))
+         (assoc option
+                '(("ro" "readonly")
+                  ("sts" "softtabstop")
+                  ("sw" "shiftwidth")
+                  ("ts" "tabstop")
+                  ("tw" "textwidth")))))
     (if expansion (cadr expansion) option)))
-   
+
 
 ;;; Not supported:
 ;;; comments/com (comment leader), because it's not language-specific in VIM.
@@ -188,7 +188,7 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    ((equal var "readonly") (toggle-read-only 1))
    ((equal var "wrap") (setq truncate-lines nil))
    ((equal var "write") (toggle-read-only -1)) ; Similar, not the same.
-   
+
    ((equal var "noexpandtab") (setq indent-tabs-mode t))
    ((equal var "noignorecase") (setq case-fold-search nil))
    ((equal var "noreadonly") (toggle-read-only -1))
