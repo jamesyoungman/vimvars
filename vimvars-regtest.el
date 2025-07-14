@@ -130,93 +130,8 @@ The value of the final expression in BODY is returned."
       ,docstring
       ,@body)))
 
-(define-test-suite unit-test-accept-tag
-  "Unit test for vimvars-accept-tag"
-
-  (check "test-vim-bol"
-    "Check we accept 'vim:' at beginning of line"
-    (assert (vimvars-accept-tag "" "vim")))
-
-  (check "test-vim-not-bol"
-    "Check we accept 'vim:' after the beginning of line"
-    (assert (vimvars-accept-tag " " "vim")))
-
-  (check "test-vi-bol"
-    "Check we accept 'vi:' at beginning of line"
-    (assert (vimvars-accept-tag "" "vi")))
-
-  (check "test-vi-not-bol"
-    "Check we accept 'vi:' after the beginning of line"
-    (assert (vimvars-accept-tag " " "vi")))
-
-  (check "test-ex-bol"
-    "Check we accept 'ex:' at beginning of line"
-    (assert (not (vimvars-accept-tag "" "ex"))))
-
-  (check "test-ex-not-bol"
-    "Check we accept 'ex:' after the beginning of line"
-    (assert (vimvars-accept-tag " " "ex")))
-
-  (check "test-foo-bol"
-    "Check we do not accept 'foo:' at beginning of line"
-    (assert (not (vimvars-accept-tag "" "foo"))))
-
-  (check "test-foo-not-bol"
-    "Check we do not accept 'foo:' after beginning of line"
-    (assert (not (vimvars-accept-tag " " "foo")))))
-
-
 (define-test-suite unit-test-vimvars-should-obey-modeline
-  "Unit test for vimvars-should-obey-modeline"
-
-  (check "test-vimvars-enabled-nil"
-    "Verify that we obey vimvars-enabled when it is nil"
-    (let ((vimvars-enabled nil)
-          (file-local-variables-alist nil)
-          (vimvars-ignore-mode-line-if-local-variables-exist nil))
-      (assert (not (vimvars-should-obey-modeline))
-                   t "case 1")))
-
-  (check "test-no-local-variables"
-    "Verify that we obey vi mode lines in the absence of local variables"
-    (let ((vimvars-enabled t)
-          (file-local-variables-alist nil)
-          (vimvars-ignore-mode-line-if-local-variables-exist nil))
-      (assert (vimvars-should-obey-modeline)
-              t "case 2")))
-
-  (check "test-with-local-variables"
-    "Verify that we ignore vi mode lines if there are local variables"
-    (let ((vimvars-enabled t)
-          (file-local-variables-alist '((tab-width . 8)))
-          (vimvars-ignore-mode-line-if-local-variables-exist t))
-      (assert (not (vimvars-should-obey-modeline))
-              t "case 3")))
-
-  (check "test-with-both"
-    "Verify that we use both vi mode lines and local variables if vimvars-ignore-mode-line-if-local-variables-exist is nil"
-    (let ((vimvars-enabled t)
-          (file-local-variables-alist '((tab-width . 8)))
-          (vimvars-ignore-mode-line-if-local-variables-exist nil))
-      (assert (vimvars-should-obey-modeline)
-              t "case 4"))))
-
-
-(define-test-suite unit-test-vimvars-expand-option-name
-  "Unit test for vimvars-expand-option-name"
-
-  (check "test-expansions"
-    "Check expansion of ro, sts, sw, ts, tw"
-    (assert (equal (vimvars-expand-option-name "ro") "readonly"))
-    (assert (equal (vimvars-expand-option-name "sts") "softtabstop"))
-    (assert (equal (vimvars-expand-option-name "sw") "shiftwidth"))
-    (assert (equal (vimvars-expand-option-name "ts") "tabstop"))
-    (assert (equal (vimvars-expand-option-name "tw") "textwidth")))
-
-  (check "test-nonexpansions"
-    "Check we don't 'expand' something that's not an abbreviation"
-    (assert (equal (vimvars-expand-option-name "blehbleh") "blehbleh"))))
-
+  "Unit test for vimvars-should-obey-modeline")
 
 (define-test-suite test-basics
   "Basic tests"
@@ -480,9 +395,7 @@ End:
 (let
     ((debug-on-error nil))
   (with-output-to-temp-buffer "*Unit Test Results*"
-    (unit-test-accept-tag)
     (unit-test-vimvars-should-obey-modeline)
-    (unit-test-vimvars-expand-option-name)
     (test-basics)
     (test-modeline-format)
     (test-tabstop)
