@@ -8,8 +8,9 @@ code is correctly laid out from the start.
 
 ## How To Use Vimvars
 
-To use this library, just put vimvars.el in a directory on your load-path
-and add this to your .emacs file:
+To use this library, just put vimvars.el in a directory on your
+`load-path` and add this to your Emacs init file
+(e.g. `~/.emacs.d/init.el`, `~/.emacs`):
 
 ```elisp
 ;;; Basic VIM tolerance
@@ -19,16 +20,8 @@ and add this to your .emacs file:
 
 ## How To Test The Code
 
-This code is currently in the middle of a transition from a custom
-test suite to the use of the standard ERT testing system.  The
-already-converted tests are in `vimvars-tests.el` and the old-style
-tests are in `vimvars-regtest.el`.
-
-This means that for the time being, you need a long cumbersome
-command-line to run the tests:
-
 ```sh
 emacs -batch \
-  -l ert -l vimvars.el -l vimvars-tests.el -l vimvars-regtest.el \
+  -l ert -l vimvars.el -l vimvars-tests.el \
   -f ert-run-tests-batch-and-exit
 ```

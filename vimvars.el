@@ -1,6 +1,6 @@
 ;;; vimvars.el --- Emacs support for VI modelines
 
-;; Copyright (C) 2010 Free Software Foundation, Inc.
+;; Copyright (C) 2010,2011,2025 Free Software Foundation, Inc.
 
 ;; Author: James Youngman <youngman@google.com>
 ;; Maintainer: James Youngman <youngman@google.com>
@@ -88,11 +88,9 @@
 
 (defun vimvars-obey-this-vim-modeline ()
   "Obey the mode line in the current regex match string."
-  (message "found a modeline: %s" (match-string 0))
   (let ((settings-end (match-end 4)))
     ;; We ignore the local suffix, since for Emacs
     ;; most settings will be buffer-local anyway.
-    ;;(message "found VIM settings %s" (match-string 4))
     (goto-char (match-beginning 4))
     ;; Look for something like this: vi: set sw=4 ts=4:
     ;; We should look for it in a comment, but for now

@@ -1,3 +1,23 @@
+;;; vimvars-tests.el --- Tests for vimvars.el
+
+;; Copyright (C) 2011,2025 Free Software Foundation, Inc.
+
+;; Author: James Youngman <youngman@google.com>
+;; Maintainer: James Youngman <youngman@google.com>
+
+;; vimvars is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; vimvars is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with vimvars.  If not, see <http://www.gnu.org/licenses/>.
+
 (ert-deftest vimvars-test-vim-bol ()
   "Check we accept 'vim:' at beginning of line"
   (should (vimvars-accept-tag "" "vim")))
@@ -83,14 +103,23 @@ Visit it with find-file, and evaluate CHECKS.
 Returns the result of the final item in CHECKS."
   (let ((fname (make-symbol "filename")))
     `(let ((,fname (make-temp-file "foo" nil ,suffix))
+	   (old-vimvars-check-lines vimvars-check-lines)
+	   (old-default-fill-column (default-value 'fill-column))
+	   (old-tab-width (default-value 'tab-width))
 	   (old-find-file-hooks find-file-hooks))
        (unwind-protect
               (progn
+		;; Set up a standard testing environment (choosing
+		;; unusual values so that it's obvious when there is a
+		;; problem).
+		(setq-default fill-column 40
+			      tab-width 14)
+		(setq vimvars-check-lines 5)
 		;; Guidance for ERT (in "Tests and Their Environment")
 		;; is to avoid using find-file in tests, so we should
 		;; find a way to perform these tests without using it.
-                (with-temp-file ,fname (insert ,content))
 		(add-hook 'find-file-hook 'vimvars-obey-vim-modeline)
+                (with-temp-file ,fname (insert ,content))
                 (kill-buffers-visiting ,fname)
                 (find-file ,fname)
                 ,@checks)
@@ -98,7 +127,11 @@ Returns the result of the final item in CHECKS."
               ;; Kill the buffer and delete the temporary file.
               (kill-buffer)
               (delete-file ,fname)
-	      (setq find-file-hooks old-find-file-hooks))))))
+	      ;; Restore defaults etc.
+	      (setq-default fill-column old-default-fill-column
+			    tab-width old-tab-width)
+	      (setq vimvars-check-lines old-vimvars-check-lines
+		    find-file-hooks old-find-file-hooks))))))
 
 (defmacro run-checks-for-text-file (content &rest checks)
   "Calls run-checks-for-file-body with SUFFIX set to .txt."
@@ -115,7 +148,6 @@ Returns the result of the final item in CHECKS."
 ;; we can tell for sure we're actually changing it.
 (ert-deftest vimvars-test-sw-4 ()
   "Verify 'set sw=4' works in C source files."
-  (message "find-file-hooks is %s" find-file-hooks)
   (run-checks-for-file-body
    ".c"
    "/* This is a C source file.\n vim: set sw=4 :\n*/\n"
@@ -154,7 +186,7 @@ Returns the result of the final item in CHECKS."
 
   (run-checks-for-text-file
    "Mode lines at line 5 should be accepted.\n\n\n\n# vim: set ts=10 :\n"
-   (assert-equal 'tab-width 10)))
+   (should (equal tab-width 10))))
 
 (ert-deftest vimvars-test-modeline-too-far-from-bottom ()
   "Check we only accept mode lines within `vimvars-check-lines' of EOF."
@@ -250,3 +282,148 @@ Returns the result of the final item in CHECKS."
   (vimvars-test-check-recognise-modeline
    "test-accept-vi-at-start"
    "vi: set ts=18 :\n"))
+
+(defmacro with-temp-default (varname temp-value &rest body)
+  "Execute BODY with the default value of VAR set to VALUE.
+
+The value of the final expression in BODY is returned."
+  (let ((oldval-var (make-symbol "previous-default")))
+    `(let ((,oldval-var ,varname))
+       (setq-default ,varname ,temp-value)
+       (unwind-protect
+              (progn ,@body)
+            (setq-default ,varname ,oldval-var)))))
+
+(ert-deftest vimvars-test-obey-set-noignorecase ()
+  (with-temp-default
+   case-fold-search t
+   (run-checks-for-text-file
+    "This is a text file.\n# vim: set noignorecase :\n"
+    (should (not case-fold-search)))))
+
+(ert-deftest vimvars-test-obey-set-ignorecase ()
+  (with-temp-default
+   case-fold-search nil
+   (run-checks-for-text-file
+    "This is a text file.\n# vim: set ignorecase :\n"
+    (should case-fold-search))))
+
+(ert-deftest vimvars-test-obey-set-wrap ()
+  (with-temp-default
+   truncate-lines t
+   (run-checks-for-text-file
+    "This is a text file.\n# vim: set wrap :\n"
+    (should (not truncate-lines)))))
+
+(ert-deftest vimvars-test-obey-set-nowrap ()
+  (with-temp-default
+   truncate-lines nil
+   (run-checks-for-text-file
+    "This is a text file.\n# vim: set nowrap :\n"
+    (should truncate-lines))))
+
+(ert-deftest vimvars-test-obey-set-textwidth-87 ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set tw=87 :\n"
+   (should (equal tab-width 14))
+   (should (equal fill-column 87))))
+
+(ert-deftest vimvars-test-ts-18 ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set ts=18 :\n"
+   (should (equal tab-width 18))
+   (should (equal fill-column 40))))
+
+(ert-deftest vimvars-test-set-readonly ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set readonly :\n"
+   (should buffer-read-only)))
+
+(ert-deftest vimvars-test-set-noreadonly ()
+  "This test doesn't really do anything useful, since
+  not read-only is the default anyway."
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set noreadonly :\n"
+   (should (not buffer-read-only))))
+
+(ert-deftest vimvars-test-set-write ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set write :\n"
+   (should (not buffer-read-only))))
+
+(ert-deftest vimvars-test-set-nowrite ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set nowrite :\n"
+   (should buffer-read-only)))
+
+(ert-deftest vimvars-test-ts-19 ()
+  (run-checks-for-text-file
+   "This is a text file.\n# vim: set ts=19 :\n"
+   (should (equal tab-width 19))
+   (should (equal fill-column 40))))
+
+(ert-deftest vimvars-test-expandtab ()
+  (with-temp-default
+   indent-tabs-mode t
+   (run-checks-for-text-file
+    "# vim: set expandtab :\n"
+    (should (not indent-tabs-mode)))))
+
+(ert-deftest vimvars-test-noexpandtab ()
+  (with-temp-default
+   indent-tabs-mode t
+   (run-checks-for-text-file
+    "# vim: set noexpandtab :\n"
+    (should indent-tabs-mode))))
+
+(ert-deftest vimvars-test-ignore-mode-line-when-local-variables ()
+  "Check that we ignore vim modelines when `vimvars-ignore-mode-line-if-local-variables-exist'."
+  (let
+      ((old-vimvars-ignore-mode-line-if-local-variables-exist
+	vimvars-ignore-mode-line-if-local-variables-exist)
+       (filebody       "# vim: set ts=18 :
+Some random text in the middle of the file.
+
+Local Variables:
+tab-width: 11
+fill-column: 59
+End:
+"))
+    (unwind-protect
+	(progn
+	  (setq vimvars-ignore-mode-line-if-local-variables-exist t)
+	  (run-checks-for-text-file
+	   filebody
+	   ;; Because the mode line was ignored, the tab width and
+	   ;; fill column should have the settings from the Emacs
+	   ;; local variables.
+	   (should (equal tab-width 11))
+	   (should (equal fill-column 59))))
+      (progn
+	(setq vimvars-ignore-mode-line-if-local-variables-exist old-vimvars-ignore-mode-line-if-local-variables-exist)) )))
+
+(ert-deftest vimvars-test-no-ignore-mode-line-when-local-variables ()
+  "Check that we ignore vim modelines when `vimvars-ignore-mode-line-if-local-variables-exist' is nil."
+  (let
+      ((old-vimvars-ignore-mode-line-if-local-variables-exist
+	vimvars-ignore-mode-line-if-local-variables-exist)
+       (filebody       "# vim: set ts=18 :
+Some random text in the middle of the file.
+
+Local Variables:
+tab-width: 11
+fill-column: 59
+End:
+"))
+    (unwind-protect
+	(progn
+	  (setq vimvars-ignore-mode-line-if-local-variables-exist nil)
+	  (run-checks-for-text-file
+	   filebody
+	   ;; Because the mode line was ignored, the tab width and
+	   ;; fill column should have the settings from the Emacs
+	   ;; local variables.
+	   (should (equal tab-width 18))
+	   (should (equal fill-column 59))))
+      (progn
+	(setq vimvars-ignore-mode-line-if-local-variables-exist old-vimvars-ignore-mode-line-if-local-variables-exist)) )))
