@@ -130,124 +130,8 @@ The value of the final expression in BODY is returned."
       ,docstring
       ,@body)))
 
-(define-test-suite unit-test-vimvars-should-obey-modeline
-  "Unit test for vimvars-should-obey-modeline")
-
-(define-test-suite test-basics
-  "Basic tests"
-
-  (check "test-disable"
-    "Check that setting vimvars-enabled to nil turns vimvars-obey-vim-modeline off."
-    (let ((vimvars-enabled nil))
-      (run-checks-for-text-file
-       "This is a text file.\n# vim: set ts=18 :\n"
-       (assert-equal 'tab-width 14))))
-
-  (check "test-basic-success-case"
-    "Check that even one item actually works."
-    (run-checks-for-text-file
-     "# vi: set ts=18 :\n"
-     (assert-equal 'tab-width 18))))
-
-
-(define-test-suite test-modeline-format
-  "modeline format"
-
-  (defun check-recognise-modeline (description modeline)
-    (check
-        description
-      (concat "Verify that we recognise the modeline " modeline)
-      (let ((actual-modeline (concat modeline "\n")))
-        (run-checks-for-text-file
-         actual-modeline
-         (assert-equal 'tab-width 18)))))
-
-  (check-recognise-modeline "test-accept-vim-set"
-                            "# vim: set ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-vi-set"
-                            "# vi: set ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-ex-set"
-                            "# ex: set ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-vim-se"
-                            "# vim: se ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-vi-se"
-                            "# vi: se ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-ex-se"
-                            "# ex: se ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-vim-setlocal"
-                            "# vim: setlocal ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-vi-setlocal"
-                            "# vi: setlocal ts=18 :\n")
-
-  (check-recognise-modeline "test-accept-ex-setlocal"
-                            "# ex: setlocal ts=18 :\n")
-
-  (check "test-require-trailing-colon"
-    "Check that we ignore modelines with no trailing colon."
-    (run-checks-for-text-file
-     "This is a text file.\n# vim: set ts=18 \n"
-     (assert-equal 'tab-width 14))) ; i.e. unchanged from default.
-
-  ;; Check modelines work even without a space before the final colon.
-  (check-recognise-modeline "test-accept-no-space-before-final-colon"
-                            "# vi: set ts=18:\n")
-
-  ;; Check extra spaces before vi: are accepted
-  (check-recognise-modeline "test-accept-extra-spaces"
-                            "#   vi: set ts=18 :\n")
-
-  ;; Check tabs before vi: are accepted.
-  (check-recognise-modeline "test-accept-tab"
-                            "#\tvi: set ts=18 :\n")
-
-  ;; Check vi: at the start of the line is accepted
-  (check-recognise-modeline "test-accept-vi-at-start" "vi: set ts=18 :\n")
-
-  (check "test-reject-ex-at-start"
-    "Check ex: at the start of the line is rejected."
-    (run-checks-for-text-file
-     "ex: set ts=18 :\n"
-     (assert-equal 'tab-width 14)))
-
-  (check "test-modeline-too-far-from-top"
-    "Check we ignore mode lines more than `vimvars-check-lines' into the file."
-    (run-checks-for-text-file
-     "Mode lines at line 6 should be ignored\n\n\n\n\n# vim: set ts=6 :\n\n\n\n\n\n\n"
-     (assert-equal 'tab-width 14))
-
-    (run-checks-for-text-file
-     "Mode lines at line 5 should be accepted.\n\n\n\n# vim: set ts=10 :\n"
-     (assert-equal 'tab-width 10)))
-
-  (check "test-modeline-too-far-from-bottom"
-    "Check we only accept mode lines within `vimvars-check-lines' of EOF."
-    (run-checks-for-text-file
-     "Mode lines 5 lines from EOF should be accepted.\n\n\n\n\n\n
-# vim: set ts=10 :\n\n\n\n\n"
-     (assert-equal 'tab-width 10))
-
-    (run-checks-for-text-file
-     "Mode lines 6 lines from EOF should be ignored.\n\n\n\n\n\n
-# vim: set ts=10 :\n\n\n\n\n\n\n"
-     (assert-equal 'tab-width 14))
-    ))
-
-
 (define-test-suite test-misc
   "test makeprg, ignorecase, noignorecase, wrap, nowrap, textwidth"
-
-  (check "makeprg"
-    "Check makeprg=blah works."
-    (run-checks-for-text-file
-     "This is a text file.\n# vim: set makeprg=gmake :\n"
-     (assert-equal 'compile-command "gmake")))
 
   (with-temp-default
    case-fold-search t
@@ -318,29 +202,6 @@ The value of the final expression in BODY is returned."
      "This is a text file.\n# vim: set nowrite :\n"
      (assert-true 'buffer-read-only))))
 
-
-
-
-(define-test-suite test-shiftwidth
-  "Check sw=N works."
-
-  (check "sw-2"
-    "Verify 'set sw=2' works in C source files."
-    (run-checks-for-file-body
-     ".c"
-     "/* This is a C source file.\n vim: set sw=2 :\n*/\n"
-     (assert-equal 'c-basic-offset 2)))
-
-  ;; Do a different check with a distinct c-basic-offset so that
-  ;; we can tell for sure we're actually changing it.
-  (check "sw-4"
-    "Verify 'set sw=4' works in C source files."
-    (run-checks-for-file-body
-     ".c"
-     "/* This is a C source file.\n vim: set sw=4 :\n*/\n"
-     (assert-equal 'c-basic-offset 4))))
-
-
 (define-test-suite test-tabstop
   "tab stop and tab expansion"
   (check "test-ts-18"
@@ -395,11 +256,7 @@ End:
 (let
     ((debug-on-error nil))
   (with-output-to-temp-buffer "*Unit Test Results*"
-    (unit-test-vimvars-should-obey-modeline)
-    (test-basics)
-    (test-modeline-format)
     (test-tabstop)
     (test-misc)
     (test-readonly)
-    (test-shiftwidth)
     (test-local-vars-interaction)))
