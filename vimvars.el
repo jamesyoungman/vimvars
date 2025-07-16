@@ -61,7 +61,10 @@
 (defun vimvars-obey-vim-modeline ()
   "Check the top and bottom of a file for VIM-style settings, and obey them.
 Only the first and last `vimvars-check-lines' lines of the file
-are checked for VIM variables.   You can use this in `find-file-hook'."
+are checked for VIM variables.   You can use this in `find-file-hook'.
+
+One enables modelines in VIM by putting 'set modeline' in the
+.vimrc file."
   (when (vimvars--should-obey-modeline)
     (save-excursion
       (or (vimvars--obey-top-modeline)
