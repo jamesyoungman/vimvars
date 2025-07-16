@@ -18,58 +18,54 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with vimvars.  If not, see <http://www.gnu.org/licenses/>.
 
-(ert-deftest vimvars-test-vim-bol ()
-  "Check we accept 'vim:' at beginning of line"
-  (should (vimvars-accept-tag "" "vim")))
+(ert-deftest vimvars-test-modeline-accept-vim-vi-bol ()
+  "Check we accept 'vim:' or 'vi:' at beginning of line.
 
-(ert-deftest vimvars-test-vim-not-bol ()
-  "Check we accept 'vim:' after the beginning of line"
-  (should (vimvars-accept-tag " " "vim")))
+   VIM does this for compatibility with VIM version 3.0."
+  ;; Verified by comparison with VIM 9.0, Jul 16 2025.
+  (should (vimvars--accept-tag "" "vim"))
+  (should (vimvars--accept-tag "" "vi")))
 
-(ert-deftest vimvars-test-vi-bol ()
-  "Check we accept 'vi:' at beginning of line"
-  (should (vimvars-accept-tag "" "vi")))
+(ert-deftest vimvars-test-modeline-ignore-ex-bol ()
+  "Check we do not accept 'ex:' at beginning of line."
+  ;; Verified by comparison with VIM 9.0, Jul 16 2025.
+  (should (not (vimvars--accept-tag "" "ex"))))
 
-(ert-deftest vimvars-test-vi-not-bol ()
-  "Check we accept 'vi:' after the beginning of line"
-  (should (vimvars-accept-tag " " "vi")))
+(ert-deftest vimvars-test-modeline-accept-vim-vi-ex-not-bol ()
+  "Check we accept 'vim:', 'vi' and 'ex:' after the beginning of line"
+  ;; Verified by comparison with VIM 9.0, Jul 16 2025.
+  (should (vimvars--accept-tag " " "vim"))
+  (should (vimvars--accept-tag " " "vi"))
+  (should (vimvars--accept-tag " " "ex"))
+  (should (vimvars--accept-tag "\t" "vim"))
+  (should (vimvars--accept-tag "\t" "vi"))
+  (should (vimvars--accept-tag "\t" "ex")))
 
-(ert-deftest vimvars-test-ex-bol ()
-  "Check we accept 'ex:' at beginning of line"
-  (should (not (vimvars-accept-tag "" "ex"))))
-
-(ert-deftest vimvars-test-ex-not-bol ()
-  "Check we accept 'ex:' after the beginning of line"
-  (should (vimvars-accept-tag " " "ex")))
-
-(ert-deftest vimvars-test-foo-bol ()
-  "Check we do not accept 'foo:' at beginning of line"
-  (should (not (vimvars-accept-tag "" "foo"))))
-
-(ert-deftest vimvars-test-foo-not-bol ()
-  "Check we do not accept 'foo:' after beginning of line"
-  (should (not (vimvars-accept-tag " " "foo"))))
+(ert-deftest vimvars-test-modeline-ignore-foo-bol ()
+  "Check we do not accept 'foo:' at beginning of line (as a modeline)."
+  (should (not (vimvars--accept-tag "" "foo")))
+  (should (not (vimvars--accept-tag " " "foo"))))
 
 (ert-deftest vimvars-test-vimvars-enabled-nil ()
   "Verify that we obey vimvars-enabled when it is nil"
   (let ((vimvars-enabled nil)
         (file-local-variables-alist nil)
         (vimvars-ignore-mode-line-if-local-variables-exist nil))
-    (should (not (vimvars-should-obey-modeline)))))
+    (should (not (vimvars--should-obey-modeline)))))
 
 (ert-deftest vimvars-test-no-local-variables ()
   "Verify that we obey vi mode lines in the absence of local variables"
   (let ((vimvars-enabled t)
         (file-local-variables-alist nil)
         (vimvars-ignore-mode-line-if-local-variables-exist nil))
-    (should (vimvars-should-obey-modeline))))
+    (should (vimvars--should-obey-modeline))))
 
 (ert-deftest vimvars-test-with-local-variables ()
   "Verify that we ignore vi mode lines if there are local variables"
   (let ((vimvars-enabled t)
         (file-local-variables-alist '((tab-width . 8)))
         (vimvars-ignore-mode-line-if-local-variables-exist t))
-    (should (not (vimvars-should-obey-modeline)))))
+    (should (not (vimvars--should-obey-modeline)))))
 
 
 (ert-deftest vimvars-test-with-both ()
@@ -77,26 +73,26 @@
   (let ((vimvars-enabled t)
         (file-local-variables-alist '((tab-width . 8)))
         (vimvars-ignore-mode-line-if-local-variables-exist nil))
-    (should (vimvars-should-obey-modeline))))
+    (should (vimvars--should-obey-modeline))))
 
 (ert-deftest vimvars-test-expansions ()
   "Check expansion of ro, sts, sw, ts, tw"
-  (should (equal (vimvars-expand-option-name "ro") "readonly"))
-  (should (equal (vimvars-expand-option-name "sts") "softtabstop"))
-  (should (equal (vimvars-expand-option-name "sw") "shiftwidth"))
-  (should (equal (vimvars-expand-option-name "ts") "tabstop"))
-  (should (equal (vimvars-expand-option-name "tw") "textwidth")))
+  (should (equal (vimvars--expand-option-name "ro") "readonly"))
+  (should (equal (vimvars--expand-option-name "sts") "softtabstop"))
+  (should (equal (vimvars--expand-option-name "sw") "shiftwidth"))
+  (should (equal (vimvars--expand-option-name "ts") "tabstop"))
+  (should (equal (vimvars--expand-option-name "tw") "textwidth")))
 
 (ert-deftest vimvars-test-nonexpansions ()
   "Check we don't 'expand' something that's not an abbreviation"
-  (should (equal (vimvars-expand-option-name "blehbleh") "blehbleh")))
+  (should (equal (vimvars--expand-option-name "blehbleh") "blehbleh")))
 
 (defun kill-buffers-visiting (filename)
   (while
       (let (existing (get-file-buffer filename))
            (when existing (kill-buffer existing)))))
 
-(defmacro run-checks-for-file-body (suffix content &rest checks)
+(defmacro vimvars-tests--run-checks-for-file-body (suffix content &rest checks)
   "Write a temporary file whose name has suffix SUFFIX, having content CONTENT.
 Visit it with find-file, and evaluate CHECKS.
 
@@ -133,13 +129,13 @@ Returns the result of the final item in CHECKS."
 	      (setq vimvars-check-lines old-vimvars-check-lines
 		    find-file-hooks old-find-file-hooks))))))
 
-(defmacro run-checks-for-text-file (content &rest checks)
-  "Calls run-checks-for-file-body with SUFFIX set to .txt."
-  `(run-checks-for-file-body ".txt" ,content ,@checks))
+(defmacro vimvars-tests--run-checks-for-text-file (content &rest checks)
+  "Calls vimvars-tests--run-checks-for-file-body with SUFFIX set to .txt."
+  `(vimvars-tests--run-checks-for-file-body ".txt" ,content ,@checks))
 
 (ert-deftest vimvars-test-sw-2 ()
   "Verify 'set sw=2' works in C source files."
-  (run-checks-for-file-body
+  (vimvars-tests--run-checks-for-file-body
    ".c"
    "/* This is a C source file.\n vim: set sw=2 :\n*/\n"
    (should (equal c-basic-offset 2))))
@@ -148,7 +144,7 @@ Returns the result of the final item in CHECKS."
 ;; we can tell for sure we're actually changing it.
 (ert-deftest vimvars-test-sw-4 ()
   "Verify 'set sw=4' works in C source files."
-  (run-checks-for-file-body
+  (vimvars-tests--run-checks-for-file-body
    ".c"
    "/* This is a C source file.\n vim: set sw=4 :\n*/\n"
    (should (equal c-basic-offset 4))))
@@ -156,60 +152,60 @@ Returns the result of the final item in CHECKS."
 (ert-deftest vimvars-test-disable ()
   "Check that setting vimvars-enabled to nil turns vimvars-obey-vim-modeline off."
   (let ((vimvars-enabled nil))
-    (run-checks-for-text-file
+    (vimvars-tests--run-checks-for-text-file
      "This is a text file.\n# vim: set ts=18 :\n"
      (should (equal tab-width 14)))))
 
 (ert-deftest vimvars-test-basic-success-case ()
     "Check that even one item actually works."
-    (run-checks-for-text-file
+    (vimvars-tests--run-checks-for-text-file
      "# vi: set ts=18 :\n"
      (should (equal tab-width 18))))
 
 (ert-deftest vimvars-test-require-trailing-colon ()
   "Check that we ignore modelines with no trailing colon."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set ts=18 \n"
    (should (equal tab-width 14)))) ; i.e. unchanged from default.
 
 (ert-deftest test-reject-ex-at-start ()
   "Check ex: at the start of the line is rejected."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "ex: set ts=18 :\n"
    (should (equal tab-width 14))))
 
 (ert-deftest vimvars-test-modeline-too-far-from-top ()
   "Check we ignore mode lines more than `vimvars-check-lines' into the file."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "Mode lines at line 6 should be ignored\n\n\n\n\n# vim: set ts=6 :\n\n\n\n\n\n\n"
    (should (equal tab-width 14)))
 
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "Mode lines at line 5 should be accepted.\n\n\n\n# vim: set ts=10 :\n"
    (should (equal tab-width 10))))
 
 (ert-deftest vimvars-test-modeline-too-far-from-bottom ()
   "Check we only accept mode lines within `vimvars-check-lines' of EOF."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "Mode lines 5 lines from EOF should be accepted.\n\n\n\n\n\n
 # vim: set ts=10 :\n\n\n\n\n"
    (should (equal tab-width 10)))
 
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "Mode lines 6 lines from EOF should be ignored.\n\n\n\n\n\n
 # vim: set ts=10 :\n\n\n\n\n\n\n"
    (should (equal tab-width 14))))
 
 (ert-deftest vimvars-test-makeprg ()
   "Check makeprg=blah works."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set makeprg=gmake :\n"
    (should (equal compile-command "gmake"))))
 
 
 (defun vimvars-test-check-recognise-modeline (description modeline)
   (let ((actual-modeline (concat modeline "\n")))
-    (run-checks-for-text-file
+    (vimvars-tests--run-checks-for-text-file
      actual-modeline
      (should (equal tab-width 18)))))
 
@@ -283,7 +279,7 @@ Returns the result of the final item in CHECKS."
    "test-accept-vi-at-start"
    "vi: set ts=18 :\n"))
 
-(defmacro with-temp-default (varname temp-value &rest body)
+(defmacro vimvars-tests--with-temp-default (varname temp-value &rest body)
   "Execute BODY with the default value of VAR set to VALUE.
 
 The value of the final expression in BODY is returned."
@@ -295,84 +291,84 @@ The value of the final expression in BODY is returned."
             (setq-default ,varname ,oldval-var)))))
 
 (ert-deftest vimvars-test-obey-set-noignorecase ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    case-fold-search t
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "This is a text file.\n# vim: set noignorecase :\n"
     (should (not case-fold-search)))))
 
 (ert-deftest vimvars-test-obey-set-ignorecase ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    case-fold-search nil
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "This is a text file.\n# vim: set ignorecase :\n"
     (should case-fold-search))))
 
 (ert-deftest vimvars-test-obey-set-wrap ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    truncate-lines t
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "This is a text file.\n# vim: set wrap :\n"
     (should (not truncate-lines)))))
 
 (ert-deftest vimvars-test-obey-set-nowrap ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    truncate-lines nil
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "This is a text file.\n# vim: set nowrap :\n"
     (should truncate-lines))))
 
 (ert-deftest vimvars-test-obey-set-textwidth-87 ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set tw=87 :\n"
    (should (equal tab-width 14))
    (should (equal fill-column 87))))
 
 (ert-deftest vimvars-test-ts-18 ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set ts=18 :\n"
    (should (equal tab-width 18))
    (should (equal fill-column 40))))
 
 (ert-deftest vimvars-test-set-readonly ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set readonly :\n"
    (should buffer-read-only)))
 
 (ert-deftest vimvars-test-set-noreadonly ()
   "This test doesn't really do anything useful, since
   not read-only is the default anyway."
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set noreadonly :\n"
    (should (not buffer-read-only))))
 
 (ert-deftest vimvars-test-set-write ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set write :\n"
    (should (not buffer-read-only))))
 
 (ert-deftest vimvars-test-set-nowrite ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set nowrite :\n"
    (should buffer-read-only)))
 
 (ert-deftest vimvars-test-ts-19 ()
-  (run-checks-for-text-file
+  (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set ts=19 :\n"
    (should (equal tab-width 19))
    (should (equal fill-column 40))))
 
 (ert-deftest vimvars-test-expandtab ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    indent-tabs-mode t
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "# vim: set expandtab :\n"
     (should (not indent-tabs-mode)))))
 
 (ert-deftest vimvars-test-noexpandtab ()
-  (with-temp-default
+  (vimvars-tests--with-temp-default
    indent-tabs-mode t
-   (run-checks-for-text-file
+   (vimvars-tests--run-checks-for-text-file
     "# vim: set noexpandtab :\n"
     (should indent-tabs-mode))))
 
@@ -392,7 +388,7 @@ End:
     (unwind-protect
 	(progn
 	  (setq vimvars-ignore-mode-line-if-local-variables-exist t)
-	  (run-checks-for-text-file
+	  (vimvars-tests--run-checks-for-text-file
 	   filebody
 	   ;; Because the mode line was ignored, the tab width and
 	   ;; fill column should have the settings from the Emacs
@@ -418,7 +414,7 @@ End:
     (unwind-protect
 	(progn
 	  (setq vimvars-ignore-mode-line-if-local-variables-exist nil)
-	  (run-checks-for-text-file
+	  (vimvars-tests--run-checks-for-text-file
 	   filebody
 	   ;; Because the mode line was ignored, the tab width and
 	   ;; fill column should have the settings from the Emacs

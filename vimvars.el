@@ -55,16 +55,23 @@
 ;; example \\| inside makeprg).
 ;;
 ;; Also, VIM accepts vi: and vim: at start-of line (but not ex:)
-;;
-;; Google Code search can be helpful in assessing what options are widely used,
-;; for example see
-;; <http://codesearch.google.com/codesearch?q=(ex|vim%3F):\+(se\+|setlocal)>
 (defconst vimvars-modeline-re
   "\\(^\\|[ \t]\\)\\(ex\\|vim?\\):[\t ]?\\(set\\|setlocal\\|se\\)? \\([^:]+\\):"
   "Regex matching a VIM modeline.")
 
+(defun vimvars-obey-vim-modeline ()
+  "Check the top and bottom of a file for VIM-style settings, and obey them.
+Only the first and last `vimvars-check-lines' lines of the file
+are checked for VIM variables.   You can use this in `find-file-hook'."
+  (when (vimvars--should-obey-modeline)
+    (save-excursion
+      (or (vimvars--obey-top-modeline)
+          (vimvars--obey-bottom-modeline)))))
 
-(defun vimvars-should-obey-modeline ()
+;;; Implementation (you probably don't need to call these functions
+;;; directly).
+
+(defun vimvars--should-obey-modeline ()
   "Return non-nil if a VIM modeline should be obeyed in this file."
   ;; Always return nil if vimvars-enabled is nil.
   ;; Otherwise, if there are Emacs local variables for this file,
@@ -76,7 +83,7 @@
       t)))
 
 
-(defun vimvars-accept-tag (leader tag)
+(defun vimvars--accept-tag (leader tag)
   "Return non-nil if LEADER followed by TAG should be accepted as a modeline."
   (cond
    ((equal "vim" tag) t)
@@ -86,7 +93,7 @@
    (t nil)))
 
 
-(defun vimvars-obey-this-vim-modeline ()
+(defun vimvars--obey-this-vim-modeline ()
   "Obey the mode line in the current regex match string."
   (let ((settings-end (match-end 4)))
     ;; We ignore the local suffix, since for Emacs
@@ -97,25 +104,25 @@
     ;; we won't worry about the syntax of the major mode.
     (while (re-search-forward
             " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
-      (let ((variable (vimvars-expand-option-name (match-string 1))))
+      (let ((variable (vimvars--expand-option-name (match-string 1))))
         (if (match-string 3)
-            (vimvars-assign variable (match-string 3))
-          (vimvars-enable-feature variable)))))
+            (vimvars--assign variable (match-string 3))
+          (vimvars--enable-feature variable)))))
   t)
 
 
-(defun vimvars-obey-top-modeline ()
+(defun vimvars--obey-top-modeline ()
   "Check for, and if found, obey a mode line at the top of the file.
 This function moves point."
   (goto-char (point-min))
   (if (and
        (re-search-forward vimvars-modeline-re
                     (line-end-position vimvars-check-lines) t)
-       (vimvars-accept-tag (match-string 1) (match-string 2)))
-      (vimvars-obey-this-vim-modeline)))
+       (vimvars--accept-tag (match-string 1) (match-string 2)))
+      (vimvars--obey-this-vim-modeline)))
 
 
-(defun vimvars-obey-bottom-modeline ()
+(defun vimvars--obey-bottom-modeline ()
   "Check for, and if found, obey a mode line at the botom of the file.
 This function moves point."
   (goto-char (point-max))
@@ -123,27 +130,16 @@ This function moves point."
        (re-search-backward vimvars-modeline-re
                      (line-beginning-position
                 (- 1 vimvars-check-lines)) t)
-       (vimvars-accept-tag (match-string 1) (match-string 2)))
-      (vimvars-obey-this-vim-modeline)))
+       (vimvars--accept-tag (match-string 1) (match-string 2)))
+      (vimvars--obey-this-vim-modeline)))
 
 
-(defun vimvars-obey-vim-modeline ()
-  "Check the top and bottom of a file for VIM-style settings, and obey them.
-Only the first and last `vimvars-check-lines' lines of the file
-are checked for VIM variables.   You can use this in `find-file-hook'."
-  (when (vimvars-should-obey-modeline)
-    (save-excursion
-      (or (vimvars-obey-top-modeline)
-          (vimvars-obey-bottom-modeline)))))
-
-
-
-(defun vimvars-set-indent (indent)
+(defun vimvars--set-indent (indent)
   "Set the amount of indentation caused by tab to INDENT in a mode-aware way."
   (when (equal major-mode 'c-mode) (setq c-basic-offset indent)))
 
 
-(defun vimvars-expand-option-name (option)
+(defun vimvars--expand-option-name (option)
   "Expand the abbreviated VIM :set variable OPTION to its full name."
   (let ((expansion
          (assoc option
@@ -157,27 +153,30 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
 
 ;;; Not supported:
 ;;; comments/com (comment leader), because it's not language-specific in VIM.
-(defun vimvars-assign (var val)
+(defun vimvars--assign (var val)
   "Emulate VIM's :set VAR=VAL."
   (message "Setting VIM option %s to %s in %s" var val (buffer-name))
   (cond
    ((equal var "makeprg") (setq compile-command val))
-   ((equal var "shiftwidth") (vimvars-set-indent (string-to-number val)))
+   ((equal var "shiftwidth") (vimvars--set-indent (string-to-number val)))
    ((equal var "softtabstop") t) ; Ignore.
    ((equal var "tabstop") (setq tab-width (string-to-number val)))
    ((equal var "textwidth") (set-fill-column (string-to-number val)))
    (t (message "Don't know how to emulate VIM variable %s" var))))
 
 
-;; FIXME: Also consider supporting ...
+;; These features are not supported, but in principle they could be:
+;;
 ;; fileencoding, encoding could be useful but likely too hairy
 ;; fileformat
 ;; tags
 ;; textmode (but this is obsolete in VIM, replaced by fileformat)
-;; Not supported:
+;;
+;; Deliberately not supported:
+;;
 ;; bomb/nobomd (byte order mark control), because I don't expect it is
 ;; comonly enough used to justify the maintenance burden.
-(defun vimvars-enable-feature (var)
+(defun vimvars--enable-feature (var)
   "Emulate VIM's :set VAR for variables that are just boolean."
   (message "Enabling VIM option %s in %s" var (buffer-name))
   (cond
@@ -194,6 +193,16 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
+
+;; If you want to manually test vimvars, one way to do this is
+;; temporarily to create an Emacs Lisp file (which we will call
+;; setup.el) in a convenient location, like this:
+;;
+;; (load-file "~/vimvars.el")
+;; (add-hook 'find-file-hook 'vimvars-obey-vim-modeline)
+;;
+;; Then, you can test it like this:
+;; emacs -q -nw -l setup.el my-test-file-name
 
 (provide 'vimvars)
 ;;; vimvars.el ends here
