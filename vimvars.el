@@ -50,7 +50,6 @@
   :type 'boolean
   :group 'vimvars)
 
-
 ;; It appears that real VIM accepts backslash-escaped characters (for
 ;; example \\| inside makeprg).
 ;;
@@ -93,37 +92,36 @@ are checked for VIM variables.   You can use this in `find-file-hook'."
    (t nil)))
 
 
-(defun vimvars--obey-this-vim-modeline ()
-  "Obey the mode line in the current regex match string."
-  (let ((settings-end (match-end 4)))
-    ;; We ignore the local suffix, since for Emacs
-    ;; most settings will be buffer-local anyway.
-    (goto-char (match-beginning 4))
-    ;; Look for something like this: vi: set sw=4 ts=4:
-    ;; We should look for it in a comment, but for now
-    ;; we won't worry about the syntax of the major mode.
-    (while (re-search-forward
-            " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
-      (let ((variable (vimvars--expand-option-name (match-string 1))))
-        (if (match-string 3)
-            (vimvars--assign variable (match-string 3))
-          (vimvars--enable-feature variable)))))
+(defun vimvars--obey-this-vim-modeline (settings-start settings-end)
+  "Obey the VIM modeline which exists between SETTINGS-START and SETTINGS-END."
+  ;; We ignore the local suffix, since for Emacs
+  ;; most settings will be buffer-local anyway.
+  (goto-char settings-start)
+  ;; Look for something like this: vi: set sw=4 ts=4:
+  ;; We should look for it in a comment, but for now
+  ;; we won't worry about the syntax of the major mode.
+  (while (re-search-forward
+          " *\\([^= ]+\\)\\(=\\([^ :]+\\)\\)?" settings-end t)
+    (let ((variable (vimvars--expand-option-name (match-string 1))))
+      (if (match-string 3)
+          (vimvars--assign variable (match-string 3))
+        (vimvars--enable-feature variable))))
   t)
 
 
 (defun vimvars--obey-top-modeline ()
-  "Check for, and if found, obey a mode line at the top of the file.
+  "Check for, and if found, obey a VIM modeline at the top of the file.
 This function moves point."
   (goto-char (point-min))
   (if (and
        (re-search-forward vimvars-modeline-re
                     (line-end-position vimvars-check-lines) t)
        (vimvars--accept-tag (match-string 1) (match-string 2)))
-      (vimvars--obey-this-vim-modeline)))
+      (vimvars--obey-this-vim-modeline (match-beginning 4) (match-end 4))))
 
 
 (defun vimvars--obey-bottom-modeline ()
-  "Check for, and if found, obey a mode line at the botom of the file.
+  "Check for, and if found, obey a VIM modeline at the botom of the file.
 This function moves point."
   (goto-char (point-max))
   (if (and
@@ -131,7 +129,7 @@ This function moves point."
                      (line-beginning-position
                 (- 1 vimvars-check-lines)) t)
        (vimvars--accept-tag (match-string 1) (match-string 2)))
-      (vimvars--obey-this-vim-modeline)))
+      (vimvars--obey-this-vim-modeline (match-beginning 4) (match-end 4))))
 
 
 (defun vimvars--set-indent (indent)
