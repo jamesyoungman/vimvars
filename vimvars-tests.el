@@ -43,6 +43,7 @@
 
 (ert-deftest vimvars-test-modeline-ignore-foo-bol ()
   "Check we do not accept 'foo:' at beginning of line (as a modeline)."
+  ;; Verified by comparison with VIM 9.0, Jul 16 2025.
   (should (not (vimvars--accept-tag "" "foo")))
   (should (not (vimvars--accept-tag " " "foo"))))
 
@@ -331,6 +332,7 @@ The value of the final expression in BODY is returned."
    (should (equal fill-column 40))))
 
 (ert-deftest vimvars-test-set-readonly ()
+  ;; Verified by comparison with VIM 9.0, Jul 16 2025.
   (vimvars-tests--run-checks-for-text-file
    "This is a text file.\n# vim: set readonly :\n"
    (should buffer-read-only)))

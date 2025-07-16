@@ -185,12 +185,17 @@ This function moves point."
    ((equal var "ignorecase") (setq case-fold-search t))
    ((equal var "readonly") (toggle-read-only 1))
    ((equal var "wrap") (setq truncate-lines nil))
-   ((equal var "write") (toggle-read-only -1)) ; Similar, not the same.
+   ((equal var "write") (toggle-read-only -1)) ; See nowrite below.
 
    ((equal var "noexpandtab") (setq indent-tabs-mode t))
    ((equal var "noignorecase") (setq case-fold-search nil))
    ((equal var "noreadonly") (toggle-read-only -1))
    ((equal var "nowrap") (setq truncate-lines t))
+
+   ;; In VIM, setting 'nowrite' option creates a situation
+   ;; in which editing the file generates no warning (unlike
+   ;; 'set readonly') but by default attempts to save the
+   ;; file (even to a new file name) generate a warning.
    ((equal var "nowrite") (toggle-read-only 1)) ; Similar, not the same
 
    (t (message "Don't know how to emulate VIM feature %s" var))))
